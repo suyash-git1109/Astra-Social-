@@ -1,4 +1,4 @@
-iimport React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './Login';
 import Signup from './Signup';
@@ -18,12 +18,11 @@ function App() {
     return () => unsubscribe();
   }, []);
 
-  if (loading) return <div style={{background: '#000', color: '#60a5fa', height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center'}}>ASTRA_CONNECTING...</div>;
+  if (loading) return <div style={{background: '#000', color: '#60a5fa', height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center'}}>CONNECTING_TO_ASTRA...</div>;
 
   return (
     <Router>
       <Routes>
-        {/* Agar user login hai to Dashboard pe bhejo, nahi to Login pe */}
         <Route path="/" element={user ? <Navigate to="/dashboard" /> : <Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/dashboard" element={user ? <Dashboard /> : <Navigate to="/" />} />
