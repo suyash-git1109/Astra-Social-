@@ -1,21 +1,17 @@
-// Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+import { getAuth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyDKUcl2KwjNLi3klPR5ij1YRh0NG8-kyIs",
+  apiKey: "AIzaSyDKUcl2KwjNLi3klPR...", // Ye aapka wahi rehne dena jo screenshot mein hai
   authDomain: "astra-social-7dfd1.firebaseapp.com",
   projectId: "astra-social-7dfd1",
-  storageBucket: "astra-social-7dfd1.firebasestorage.app",
+  storageBucket: "astra-social-7dfd1.appspot.com",
   messagingSenderId: "226070790602",
-  appId: "1:226070790602:web:1a7ae39363eaccbfddcf33",
-  measurementId: "G-2S2F0FF9KX"
+  appId: "1:226070790602:web:1a7ae...",
+  measurementId: "G-2S2F0FF9KK"
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+export const auth = getAuth(app);
+export const db = getFirestore(app);
