@@ -1,78 +1,100 @@
 import React, { useState, useEffect } from 'react';
-import { db, auth } from './firebase';
-import { collection, query, onSnapshot, addDoc, serverTimestamp, orderBy } from 'firebase/firestore';
+import { auth, db } from './firebase';
+import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { signOut } from 'firebase/auth';
+import { useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
-  const [users, setUsers] = useState([]); // Duniya bhar ke users yahan aayenge
-  const [messages, setMessages] = useState([]);
-  const [newMessage, setNewMessage] = useState("");
+  const [message, setMessage] = useState('');
+  const [feeds, setFeeds] = useState([]);
+  const [userData, setUserData] = useState(null);
+  const navigate = useNavigate();
 
-  // 1. Saare Users ko Firebase se khichna
+  // Get Current User Info
   useEffect(() => {
-    const q = query(collection(db, "users")); 
+    const user = auth.currentUser;
+    if (user) {
+      setUserData({
+        name: user.displayName || 'CONTRIBUTOR',
+        initial: user.displayName ? user.displayName.charAt(0) : 'A'
+      });
+    }
+  }, []);
+
+  // Real-time Feed Listener
+  useEffect(() => {
+    const q = query(collection(db, "broadcasts"), orderBy("timestamp", "desc"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setFeeds(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
     return () => unsubscribe();
   }, []);
 
-  // 2. Global Messages load karna
-  useEffect(() => {
-    const q = query(collection(db, "broadcasts"), orderBy("createdAt", "desc"));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setMessages(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
-    return () => unsubscribe();
-  }, []);
-
-  const sendMessage = async (e) => {
+  const handleSend = async (e) => {
     e.preventDefault();
-    if (newMessage.trim() === "") return;
-    await addDoc(collection(db, "broadcasts"), {
-      text: newMessage,
-      user: auth.currentUser.email,
-      createdAt: serverTimestamp(),
-    });
-    setNewMessage("");
+    if (message.trim() === "") return;
+
+    try {
+      await addDoc(collection(db, "broadcasts"), {
+        text: message,
+        user: userData.name,
+        timestamp: serverTimestamp(),
+      });
+      setMessage("");
+    } catch (error) {
+      console.error("Error sending message: ", error);
+    }
+  };
+
+  const handleLogout = () => {
+    signOut(auth).then(() => navigate('/'));
   };
 
   return (
-    <div style={{ display: 'flex', height: '100vh', backgroundColor: '#000', color: '#fff', fontFamily: 'sans-serif' }}>
+    <div style={{ backgroundColor: '#000', color: '#fff', minHeight: '100vh', fontFamily: 'monospace', padding: '20px' }}>
       
-      {/* SIDEBAR: ALL REGISTERED USERS */}
-      <div style={{ width: '260px', borderRight: '1px solid #1e3a8a', padding: '20px', background: '#050505', overflowY: 'auto' }}>
-        <h3 style={{ color: '#60a5fa', fontSize: '14px', marginBottom: '20px', letterSpacing: '2px' }}>GLOBAL_USERS</h3>
-        {users.map(u => (
-          <div key={u.id} style={{ padding: '12px', marginBottom: '10px', borderRadius: '8px', border: '1px solid #111', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '13px' }}>👤 {u.email.split('@')[0]}</span>
-            <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#60a5fa' }}>📞</button>
-          </div>
-        ))}
+      {/* HEADER / PROFILE CARD */}
+      <div style={{ maxWidth: '600px', margin: '0 auto', border: '1px solid #333', borderRadius: '20px', padding: '30px', textAlign: 'center', background: 'linear-gradient(145deg, #0a0a0a, #111)', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
+        <div style={{ width: '80px', height: '80px', borderRadius: '50%', backgroundColor: '#fff', color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', fontWeight: 'bold', margin: '0 auto 15px', border: '4px solid #60a5fa' }}>
+          {userData?.initial}
+        </div>
+        <h2 style={{ letterSpacing: '3px', margin: '10px 0' }}>{userData?.name}</h2>
+        <p style={{ color: '#00ff00', fontSize: '12px', marginBottom: '20px' }}>● SYSTEM_ACTIVE / {userData?.name === 'SUYASH' ? 'ADMIN' : 'CONTRIBUTOR'}</p>
+        <button onClick={handleLogout} style={{ backgroundColor: 'transparent', border: '1px solid #ff4d4d', color: '#ff4d4d', padding: '8px 20px', borderRadius: '5px', cursor: 'pointer', fontSize: '10px' }}>TERMINATE_SESSION</button>
       </div>
 
-      {/* CHAT AREA */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '20px' }}>
-        <h2 style={{ color: '#60a5fa', marginBottom: '20px' }}>ASTRA_GLOBAL_FEED</h2>
+      {/* BROADCAST INPUT */}
+      <div style={{ maxWidth: '600px', margin: '30px auto', display: 'flex', gap: '10px' }}>
+        <input 
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          placeholder="Broadcast to Astra Nexus..." 
+          style={{ flex: 1, padding: '15px', borderRadius: '10px', border: '1px solid #333', backgroundColor: '#0a0a0a', color: '#fff', outline: 'none' }}
+        />
+        <button onClick={handleSend} style={{ padding: '0 30px', borderRadius: '10px', border: 'none', backgroundColor: '#fff', color: '#000', fontWeight: 'bold', cursor: 'pointer' }}>SEND</button>
+      </div>
+
+      {/* LIVE FEED */}
+      <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+        <h3 style={{ fontSize: '12px', color: '#666', marginBottom: '15px', textAlign: 'center', letterSpacing: '2px' }}>GLOBAL_BROADCAST_FEED</h3>
         
-        <div style={{ flex: 1, overflowY: 'auto', marginBottom: '20px', border: '1px solid #111', padding: '15px', borderRadius: '10px' }}>
-          {messages.map(msg => (
-            <div key={msg.id} style={{ marginBottom: '15px', padding: '10px', background: '#0a0a0a', borderRadius: '5px' }}>
-              <small style={{ color: '#3b82f6' }}>{msg.user}</small>
-              <p style={{ margin: '5px 0' }}>{msg.text}</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+          {feeds.map((feed) => (
+            <div key={feed.id} style={{ border: '1px solid #222', padding: '15px', borderRadius: '12px', backgroundColor: '#050505' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#60a5fa', marginBottom: '8px' }}>
+                <span>{feed.user}</span>
+                <span>{feed.timestamp?.toDate().toLocaleTimeString()}</span>
+              </div>
+              <p style={{ fontSize: '14px', lineHeight: '1.5', margin: 0 }}>{feed.text}</p>
             </div>
           ))}
         </div>
-
-        <form onSubmit={sendMessage} style={{ display: 'flex', gap: '10px' }}>
-          <input 
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Type a global message..." 
-            style={{ flex: 1, padding: '12px', borderRadius: '5px', background: '#111', border: '1px solid #1e3a8a', color: '#fff' }} 
-          />
-          <button type="submit" style={{ padding: '10px 25px', background: '#60a5fa', color: '#000', fontWeight: 'bold', border: 'none', borderRadius: '5px' }}>SEND</button>
-        </form>
       </div>
+
+      <footer style={{ textAlign: 'center', marginTop: '50px', padding: '20px', color: '#444', fontSize: '10px' }}>
+        ASTRA_NEXUS_SYSTEM // AMBEJOGAI_NODE <br/>
+        <span style={{ color: '#60a5fa', fontSize: '12px', marginTop: '10px', display: 'block' }}>DEVELOPED BY SUYASH SALUNKE</span>
+      </footer>
     </div>
   );
 };
